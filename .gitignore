@@ -1,0 +1,21 @@
+# 第二版（epievo）与它的运行数据 —— 与主线无关，不随仓库发布
+/epievo/
+/runs/
+/store/
+/out/
+/dashboard.html
+/技术报告.md
+
+# 对话记录与本地工具目录
+/对话记录/
+/交接说明.md
+/.claude/
+/.zcode/
+/.mimosa/
+/.video_agent/
+
+# 缓存与系统文件
+__pycache__/
+*.pyc
+*.pkl
+.DS_Store

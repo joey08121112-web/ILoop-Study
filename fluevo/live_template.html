@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日新·流感版 实时看板</title>
+<style>
+:root{
+  --page:#f9f9f7; --surf:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --ink3:#6f6e66; --line:#e3e2dc;
+  --c-a:#8a897f; --c-b:#eda100; --c-c:#2a78d6; --c-wrong:#eb6834;
+  --p-beta:#6250d6; --p-gamma:#1baf7a; --p-sus:#eb6834; --p-none:#8a897f;
+  --band:#2a78d6; --alarm:#b97a00; --truth:#d03b3b; --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark){:root{
+  --page:#0d0d0d; --surf:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --ink3:#a3a298; --line:#383835;
+  --c-a:#9d9c92; --c-b:#e0a21a; --c-c:#4a97f0; --c-wrong:#f07a4a;
+  --p-beta:#9085e9; --p-gamma:#2bc28c; --p-sus:#f07a4a; --p-none:#9d9c92;
+  --band:#4a97f0; --alarm:#e0a21a; --truth:#ef6b6b; --accent:#4a97f0;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:17px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:18px 22px 48px}
+h1{font-size:28px;margin:0 0 2px;font-weight:700}
+.sub{color:var(--ink2);margin:0 0 8px}
+h2{font-size:19px;margin:0 0 6px;font-weight:650}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px;min-width:0;margin-top:16px}
+.bar{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surf);flex-wrap:wrap}
+.seg button{border:0;background:none;color:var(--ink2);padding:8px 13px;font:inherit;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:var(--surf)}
+button.act{border:1px solid var(--line);background:var(--surf);color:var(--ink);padding:8px 16px;border-radius:8px;font:inherit;cursor:pointer}
+button.act:disabled{opacity:.45;cursor:default}
+button.act.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+label.chk{color:var(--ink);display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+input[type=range]{width:130px;accent-color:var(--accent)}
+.day{font-variant-numeric:tabular-nums;font-weight:650;min-width:130px}
+.note{color:var(--ink2);min-height:26px;margin:4px 0}
+.legend{display:flex;gap:6px 18px;flex-wrap:wrap;color:var(--ink);font-size:15px;margin:2px 0 6px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:6px;vertical-align:4px}
+.legend i.dot{width:10px;height:10px;border:0;border-radius:50%;vertical-align:-1px}
+.legend i.box{width:16px;height:12px;border:0;opacity:.3;vertical-align:-1px}
+.legend i.dash{border-top-style:dashed}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1000px){.grid2,.grid3{grid-template-columns:1fr}}
+.hv{position:relative}
+.hv svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px;line-height:1.45;box-shadow:0 2px 10px rgba(0,0,0,.18);white-space:nowrap;display:none;z-index:5;color:var(--ink)}
+svg text{fill:var(--ink2);font-size:13px}
+.big{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.stats{display:flex;gap:26px;flex-wrap:wrap;margin:4px 0 6px}
+.stats .l{color:var(--ink2);font-size:14px}
+.rows{display:grid;grid-template-columns:minmax(0,1.3fr) 1.2fr 56px auto;gap:8px 10px;align-items:center;margin-top:6px}
+.rows .t{height:14px;background:var(--line);border-radius:5px;overflow:hidden}
+.rows .t i{display:block;height:100%}
+.rows .p{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.rows button{padding:5px 10px;font-size:15px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+.tier{display:inline-block;border:2px solid var(--line);border-radius:8px;padding:2px 12px;font-weight:700;margin-left:6px}
+table{border-collapse:collapse;width:100%;font-size:16px}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+td:first-child,th:first-child{text-align:left}
+th{color:var(--ink2);font-weight:600}
+.log{margin:6px 0 0;padding:0;list-style:none;max-height:210px;overflow:auto;font-size:16px}
+.log li{padding:4px 0;border-bottom:1px solid var(--line)}
+.log b{font-variant-numeric:tabular-nums;margin-right:10px}
+.mets{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:700px){.mets{grid-template-columns:1fr}}
+.met{border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.met .l{color:var(--ink);font-weight:600}
+.cmp{display:flex;gap:26px;flex-wrap:wrap;margin-top:6px}
+.cmp .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.cmp .l{color:var(--ink2);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>日新 · 流感版 实时看板</h1>
+  <p class="sub">每前进一天，后端真的让三个引擎各算一步；变点处由你确认进化路径。未来的真值不会提前发给页面。</p>
+
+  <div class="card" style="margin-top:8px">
+    <div class="bar">
+      <span class="seg" id="scen"></span>
+      <label class="chk"><input type="checkbox" id="useS" checked>使用搜索指数</label>
+      <button class="act" id="newSeed">换一条新数据流</button>
+      <span class="sub" id="seedTxt"></span>
+    </div>
+    <div class="bar">
+      <button class="act primary" id="play" disabled>▶ 播放</button>
+      <button class="act" id="stepBtn" disabled>单步</button>
+      <label class="chk">速度 <input type="range" id="spd" min="0" max="100" value="70"></label>
+      <label class="chk"><input type="checkbox" id="apause" checked>遇到变点暂停</label>
+      <label class="chk"><input type="checkbox" id="reveal">揭晓真实变化</label>
+      <span class="day" id="dayTxt">第 0 / 365 天</span>
+    </div>
+    <div class="note" id="note">正在准备……</div>
+  </div>
+
+  <div class="card">
+    <h2>① 每日新增与预测（对数纵轴）</h2>
+    <div class="legend" id="lgMain"></div>
+    <div class="hv" id="chMain"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>② 变点前后：进化前与进化后的预测</h2>
+      <div class="legend" id="lgCmp"></div>
+      <div class="hv" id="chCmp"></div>
+      <div class="cmp" id="cmpNum"></div>
+    </div>
+    <div class="card">
+      <h2>③ 候选进化路径</h2>
+      <div class="note" id="candNote">尚未出现变点。</div>
+      <div class="rows" id="cand"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>④ 误差监控（完整系统）<span class="tier" id="tier">正常</span></h2>
+    <div class="grid3">
+      <div><div class="legend" id="lgNu"></div><div class="hv" id="chNu"></div></div>
+      <div><div class="legend" id="lgCu"></div><div class="hv" id="chCu"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⑤ 参数</h2>
+    <div class="legend" id="lgPar"></div>
+    <div class="grid3">
+      <div><div class="note">传播率乘子（1 = 预训练学到的水平）</div><div class="hv" id="chBeta"></div></div>
+      <div><div class="note">康复率乘子</div><div class="hv" id="chGam"></div></div>
+    </div>
+    <div class="note" style="margin-top:12px">预训练（只用前五年）学到的参数与真值</div>
+    <table id="preTab"></table>
+  </div>
+
+  <div class="grid3">
+    <div class="card"><h2>⑥ 事件日志</h2><ul class="log" id="log"></ul></div>
+    <div class="card"><h2>⑦ 累计指标：7 天预测平均相对误差</h2><div class="mets" id="mets"></div>
+      <div class="note">只统计已有真值的日子；相对误差 = |预测 − 实际| / max(实际, 10)。</div></div>
+  </div>
+</div>
+
+<script>
+const CFG=__CFG__;
+const $=id=>document.getElementById(id);
+const NAMES={a:'不进化',b:'只微调',c:'完整系统'};
+const COL={a:'var(--c-a)',b:'var(--c-b)',c:'var(--c-c)'};
+const PCOL={beta:'var(--p-beta)',gamma:'var(--p-gamma)',sus:'var(--p-sus)',none:'var(--p-none)'};
+const PORDER=['beta','gamma','sus','none'];
+const YEAR=CFG.year;
+let S=null, hist=[], events=[], truth=null, playing=false, busy=false, gen=0, scen='lockdown', pausedFor=-1, lastProbs=null;
+
+// ---------------------------------------------------------------- 通用图表
+function niceTicks(lo,hi,n){const span=hi-lo||1,raw=span/n,p=Math.pow(10,Math.floor(Math.log10(raw)));
+  const m=raw/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toFixed(10));return out}
+function logTicks(lo,hi){const out=[];for(let e=Math.floor(Math.log10(lo));e<=Math.ceil(Math.log10(hi));e++)for(const m of [1,2,5]){const v=m*Math.pow(10,e);if(v>=lo*0.999&&v<=hi*1.001)out.push(v)}return out}
+const fmt=v=>v>=1e4?(v/1e3).toFixed(0)+'k':v>=1000?(v/1e3).toFixed(1)+'k':(Math.abs(v)<10&&v%1?v.toFixed(1):Math.round(v));
+function initHost(h){h.innerHTML='<div class="sv"></div><div class="tip"></div>';
+  h.addEventListener('mousemove',e=>{const o=h._o,g=h._g;if(!o||!o.hover||!g)return;const svg=h.querySelector('svg');if(!svg)return;
+    const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*g.W;
+    const x=Math.round(o.x0+(px-g.L)/g.pw*(o.x1-o.x0));if(x<o.x0||x>o.x1){h.querySelector('.tip').style.display='none';return}
+    const tip=h.querySelector('.tip'),html=o.hover(x);if(!html){tip.style.display='none';return}
+    tip.innerHTML=html;tip.style.display='block';
+    const gl=svg.querySelector('.guide');if(gl){const gx=g.L+(x-o.x0)/(o.x1-o.x0)*g.pw;gl.setAttribute('x1',gx);gl.setAttribute('x2',gx);gl.style.display='block'}
+    const hw=h.clientWidth,tw=tip.offsetWidth;let left=e.clientX-h.getBoundingClientRect().left+14;if(left+tw>hw)left=hw-tw-4;if(left<0)left=0;
+    tip.style.left=left+'px';tip.style.top=Math.max(0,e.clientY-h.getBoundingClientRect().top-10)+'px'});
+  h.addEventListener('mouseleave',()=>{h.querySelector('.tip').style.display='none';const gl=h.querySelector('.guide');if(gl)gl.style.display='none'})}
+function draw(h,o){
+  h._o=o;const W=900,H=o.h||300,L=56,R=14,T=10,B=28,pw=W-L-R,ph=H-T-B;h._g={W,L,pw};
+  const lg=o.ylog,f=lg?Math.log:v=>v;
+  const sx=x=>L+(x-o.x0)/(o.x1-o.x0)*pw;
+  const sy=v=>{if(lg)v=Math.max(v,o.y0);return T+ph-(f(v)-f(o.y0))/(f(o.y1)-f(o.y0))*ph};
+  const id='cp'+h.id;let s=`<svg viewBox="0 0 ${W} ${H}" role="img"><defs><clipPath id="${id}"><rect x="${L}" y="${T}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+  const yt=lg?logTicks(o.y0,o.y1):niceTicks(o.y0,o.y1,5);
+  for(const v of yt){const y=sy(v);s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" style="stroke:var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${fmt(v)}</text>`}
+  for(const v of niceTicks(o.x0,o.x1,o.xt||8)){const x=sx(v);s+=`<line x1="${x}" x2="${x}" y1="${T+ph}" y2="${T+ph+4}" style="stroke:var(--ink3)"/><text x="${x}" y="${H-8}" text-anchor="middle">${v}</text>`}
+  s+=`<text x="${W-R}" y="${H-8}" text-anchor="end" style="opacity:.0">.</text>`;
+  s+=`<g clip-path="url(#${id})">`;
+  for(const hl of o.hlines||[]){const y=sy(hl.y);s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" style="stroke:${hl.color||'var(--ink3)'};stroke-dasharray:${hl.dash||'5 4'};stroke-width:1.5"/>`}
+  for(const vl of o.vlines||[]){const x=sx(vl.x);s+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ph}" style="stroke:${vl.color};stroke-width:2;stroke-dasharray:${vl.dash||'0'}"/>`}
+  for(const sr of o.series||[]){
+    if(sr.type==='band'){if(sr.pts.length){let d=sr.pts.map(p=>sx(p[0])+','+sy(p[2])).join(' ')+' '+sr.pts.slice().reverse().map(p=>sx(p[0])+','+sy(p[1])).join(' ');
+      s+=`<polygon points="${d}" style="fill:${sr.color};opacity:.22"/>`}}
+    else if(sr.type==='bars'){const bw=Math.max(1,pw/(o.x1-o.x0)*0.8);for(const p of sr.pts){const y0=sy(0),y1=sy(Math.max(o.y0,Math.min(o.y1,p[1])));s+=`<rect x="${sx(p[0])-bw/2}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.abs(y1-y0)}" style="fill:${sr.color}"/>`}}
+    else if(sr.type==='dots'){for(const p of sr.pts)s+=`<circle cx="${sx(p[0])}" cy="${sy(p[1])}" r="${sr.r||2.5}" style="fill:${sr.color}"/>`}
+    else if(sr.pts.length){s+=`<polyline points="${sr.pts.map(p=>sx(p[0])+','+sy(p[1])).join(' ')}" style="fill:none;stroke:${sr.color};stroke-width:${sr.w||2.5};stroke-dasharray:${sr.dash||'0'};stroke-linejoin:round"/>`}
+  }
+  s+='</g>';
+  for(const vl of o.vlines||[]){if(vl.label&&vl.x>=o.x0&&vl.x<=o.x1){const x=sx(vl.x);s+=`<text x="${x+4}" y="${T+14+(vl.row||0)*15}" style="fill:var(--ink)">${vl.label}</text>`}}
+  s+=`<line class="guide" x1="0" x2="0" y1="${T}" y2="${T+ph}" style="stroke:var(--ink3);stroke-width:1;display:none"/></svg>`;
+  h.querySelector('.sv').innerHTML=s}
+function legend(el,items){el.innerHTML=items.map(([c,t,k])=>`<span><i class="${k||''}" style="${k==='dot'||k==='box'?'background':'border-color'}:${c}"></i>${t}</span>`).join('')}
+['chMain','chCmp','chNu','chCu','chBeta','chGam'].forEach(i=>initHost($(i)));
+
+legend($('lgMain'),[['var(--ink)','实际每日新增','dot'],[COL.a,'不进化（7 天前的预测）'],[COL.b,'只微调（7 天前的预测）'],[COL.c,'完整系统（7 天前的预测）'],['var(--band)','完整系统未来 14 天 5%–95% 区间','box'],['var(--alarm)','报警日','dash'],['var(--c-c)','确认日','dash'],['var(--truth)','真实变化（揭晓后）']]);
+legend($('lgCmp'),[['var(--ink)','实际值','dot'],['var(--c-a)','进化前：报警前一天做出的预测','dash'],['var(--c-c)','进化后：确认当天做出的预测'],['var(--p-beta)','未确认时：各候选路径的预测','dash']]);
+legend($('lgNu'),[['var(--c-c)','标准化预测误差（每日新增）','box'],['var(--ink)','（搜索指数）','dot'],['var(--ink3)','±2 参考线','dash']]);
+legend($('lgCu'),[['var(--c-c)','累计偏离'],['var(--ink3)','h/2 与 h 门槛','dash']]);
+legend($('lgPar'),[[COL.a,'不进化'],[COL.b,'只微调'],[COL.c,'完整系统']]);
+
+// ---------------------------------------------------------------- 渲染
+const med=fc=>fc.map(r=>r[1]);
+const last=()=>hist[hist.length-1];
+function cAt(d){return hist[d]&&hist[d].eng.c}
+function curAlarm(){const r=last();return r&&r.eng.c.alarm!=null?r.eng.c.alarm:null}
+function renderMain(){
+  const now=hist.length-1,ys=hist.map(r=>[r.d,r.y]);
+  const sr=[{type:'dots',pts:ys,color:'var(--ink)',r:2.2}];
+  for(const k of ['a','b','c'])sr.push({pts:hist.filter(r=>r.eng[k].p7!=null).map(r=>[r.d,r.eng[k].p7]),color:COL[k],w:k==='c'?3:2.2});
+  let vals=hist.map(r=>r.y).filter(v=>v>0);
+  if(now>=0){const fc=last().eng.c.fc;
+    sr.unshift({type:'band',pts:fc.map((r,i)=>[now+1+i,r[0],r[2]]),color:'var(--band)'});
+    sr.push({pts:[[now,last().y]].concat(fc.map((r,i)=>[now+1+i,r[1]])),color:'var(--c-c)',w:2,dash:'6 4'});
+    fc.forEach(r=>{vals.push(r[0],r[2])})}
+  hist.forEach(r=>{for(const k of['a','b','c'])if(r.eng[k].p7)vals.push(r.eng[k].p7)});
+  const mn=Math.max(1,Math.min(...(vals.length?vals:[10]))),mx=Math.max(...(vals.length?vals:[100]));
+  const vl=[];events.forEach(e=>{vl.push({x:e.alarm,color:'var(--alarm)',dash:'6 4',label:'报警'});vl.push({x:e.day,color:'var(--c-c)',dash:'6 4',label:'确认',row:1})});
+  const ca=curAlarm();if(ca!=null)vl.push({x:ca,color:'var(--alarm)',dash:'6 4',label:'报警'});
+  if(truth&&truth.change&&$('reveal').checked)vl.push({x:truth.change.day,color:'var(--truth)',label:'真实变化',row:2});
+  draw($('chMain'),{x0:0,x1:YEAR-1,xt:10,y0:Math.pow(10,Math.floor(Math.log10(mn))),y1:Math.pow(10,Math.ceil(Math.log10(mx*1.1))),ylog:true,h:340,series:sr,vlines:vl,
+    hover:x=>{const r=hist[x];if(!r)return null;let t=`<b>第 ${x} 天</b><br>实际新增 ${r.y}`;for(const k of['a','b','c'])t+=`<br>${NAMES[k]}（7 天前预测）${r.eng[k].p7!=null?Math.round(r.eng[k].p7):'—'}`;return t}})}
+function relErr(pred,d){const y=hist[d]?hist[d].y:null;return y==null||pred==null?null:Math.abs(pred-y)/Math.max(y,10)}
+function renderCmp(){
+  const ev=events.length?events[events.length-1]:null,ca=curAlarm();
+  const A=ca!=null?ca:ev?ev.alarm:null;
+  if(A==null){draw($('chCmp'),{x0:0,x1:10,y0:0,y1:1,series:[],h:300});$('cmpNum').innerHTML='<div class="l">出现变点后，这里会固定显示进化前与进化后的预测。</div>';return}
+  const C=ca!=null?null:(ev?ev.day:null),now=hist.length-1;
+  const x0=Math.max(0,A-12),x1=Math.min(YEAR-1,Math.max(A+22,(C||A)+16));
+  const preRec=cAt(A-1),pre=preRec?med(preRec.fc).map((v,i)=>[A+i,v]):[];
+  const post=C!=null&&cAt(C)?med(cAt(C).fc).map((v,i)=>[C+1+i,v]):[];
+  const sr=[{pts:hist.filter(r=>r.d>=x0&&r.d<=x1).map(r=>[r.d,r.y]),color:'var(--ink)',w:1.5},{type:'dots',pts:hist.filter(r=>r.d>=x0&&r.d<=x1).map(r=>[r.d,r.y]),color:'var(--ink)',r:3}];
+  sr.push({pts:pre,color:'var(--c-a)',w:3,dash:'7 5'});
+  if(post.length)sr.push({pts:post,color:'var(--c-c)',w:3});
+  const lc=last().eng.c;
+  if(ca!=null&&lc.fc_paths)for(const p of PORDER)if(lc.fc_paths[p])sr.push({pts:lc.fc_paths[p].map((v,i)=>[now+1+i,v]),color:PCOL[p],w:2,dash:'2 4'});
+  let vals=[];sr.forEach(s=>s.pts&&s.pts.forEach(p=>{if(p[0]>=x0&&p[0]<=x1)vals.push(p[1])}));
+  const mn=Math.min(...vals),mx=Math.max(...vals);
+  const vl=[{x:A,color:'var(--alarm)',dash:'6 4',label:'报警'}];if(C!=null)vl.push({x:C,color:'var(--c-c)',dash:'6 4',label:'确认',row:1});
+  draw($('chCmp'),{x0,x1,xt:8,y0:Math.max(0,mn*0.85),y1:mx*1.08,h:300,series:sr,vlines:vl,
+    hover:x=>{let t=`<b>第 ${x} 天</b>`;if(hist[x])t+=`<br>实际 ${hist[x].y}`;const a=pre.find(p=>p[0]===x),b=post.find(p=>p[0]===x);
+      if(a)t+=`<br>进化前预测 ${Math.round(a[1])}`;if(b)t+=`<br>进化后预测 ${Math.round(b[1])}`;
+      if(ca!=null&&lc.fc_paths&&x>now)for(const p of PORDER)if(lc.fc_paths[p])t+=`<br>${CFG.path_cn[p]} ${Math.round(lc.fc_paths[p][x-now-1])}`;return t}});
+  // 平均相对误差：同一时段内比较
+  const s0=C!=null?C+1:A,e0=Math.min(now,A+13,C!=null?C+14:1e9);
+  const win=[];for(let d=s0;d<=e0;d++)win.push(d);
+  const mean=(m)=>{const v=win.map(d=>{const p=m.find(q=>q[0]===d);return p?relErr(p[1],d):null}).filter(v=>v!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
+  const ep=mean(pre),eq=post.length?mean(post):null,pc=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  let h=`<div><div class="v">${pc(ep)}</div><div class="l">进化前 平均相对误差</div></div>`;
+  h+=`<div><div class="v">${pc(eq)}</div><div class="l">进化后 平均相对误差</div></div>`;
+  h+=`<div class="l" style="align-self:end">${win.length?`比较时段：第 ${s0}–${e0} 天（${win.length} 天，已有真值）`:'等待真值到达'}${C==null?'；尚未确认，进化后线待确认后出现':''}</div>`;
+  $('cmpNum').innerHTML=h}
+function renderCand(){
+  const lc=hist.length?last().eng.c:null,open=lc&&lc.alarm!=null,ev=events.length?events[events.length-1]:null;
+  let probs=open?lc.probs:(ev?ev.probs:null);
+  if(!probs){$('cand').innerHTML='';$('candNote').textContent='尚未出现变点。';return}
+  const ca=open?lc.alarm:ev.alarm;
+  $('candNote').textContent=open?`第 ${ca} 天报警，已观察 ${hist.length-1-ca} 天。点一条路径确认；不点则系统按规则到期自动取概率最高的。`
+    :`第 ${ev.day} 天由${ev.who}确认：${ev.path_cn}（变化始于第 ${ev.onset} 天）。下面是确认当时的概率。`;
+  $('cand').innerHTML=PORDER.map(p=>{const v=probs[p]||0,chosen=!open&&ev&&ev.path===p;
+    return `<div><span class="sw" style="background:${PCOL[p]}"></span>${CFG.path_cn[p]}${chosen?`（${ev.who}确认）`:''}</div><div class="t"><i style="width:${v*100}%;background:${PCOL[p]}"></i></div><div class="p">${(v*100).toFixed(0)}%</div><button class="act" data-p="${p}" ${open&&!busy?'':'disabled'}>确认这条路径</button>`}).join('');
+  $('cand').querySelectorAll('button').forEach(b=>b.onclick=()=>{playing=false;setPlay();doStep(b.dataset.p)})}
+function renderErr(){
+  const hasS=S&&S.search,nu0=[],nu1=[],cu=[];hist.forEach(r=>{const c=r.eng.c;nu0.push([r.d,c.nu[0]]);if(hasS&&c.nu[1]!=null)nu1.push([r.d,c.nu[1]]);cu.push([r.d,c.cusum])});
+  draw($('chNu'),{x0:0,x1:YEAR-1,xt:10,y0:-5,y1:5,h:240,series:[{type:'bars',pts:nu0,color:'var(--c-c)'},{type:'dots',pts:nu1.map(p=>[p[0],Math.max(-5,Math.min(5,p[1]))]),color:'var(--ink)',r:2}],
+    hlines:[{y:2},{y:-2},{y:0,dash:'0',color:'var(--line)'}],hover:x=>{const r=hist[x];if(!r)return null;return `<b>第 ${x} 天</b><br>每日新增 ${r.eng.c.nu[0]}`+(hasS&&r.eng.c.nu[1]!=null?`<br>搜索指数 ${r.eng.c.nu[1]}`:'')}});
+  const h=S?S.h:10,mx=Math.max(h*1.25,...cu.map(p=>p[1]),1);
+  draw($('chCu'),{x0:0,x1:YEAR-1,xt:10,y0:0,y1:mx,h:240,series:[{pts:cu,color:'var(--c-c)',w:2.5}],hlines:[{y:h/2},{y:h,color:'var(--truth)'}],
+    vlines:events.map(e=>({x:e.alarm,color:'var(--alarm)',dash:'6 4'})),hover:x=>{const r=hist[x];return r?`<b>第 ${x} 天</b><br>累计偏离 ${r.eng.c.cusum}（h/2 = ${(h/2).toFixed(1)}，h = ${h}）<br>分级：${r.eng.c.tier}`:null}});
+  const tr=hist.length?last().eng.c.tier:'正常';$('tier').textContent='当前分级：'+tr;
+  $('tier').style.borderColor=tr==='变点'?'var(--truth)':tr==='疑似漂移'?'var(--alarm)':'var(--line)'}
+function renderPar(){
+  for(const [id,key] of [['chBeta','beta'],['chGam','gamma']]){
+    const sr=['a','b','c'].map(k=>({pts:hist.map(r=>[r.d,r.eng[k][key]]),color:COL[k],w:k==='c'?3:2}));
+    const all=hist.flatMap(r=>['a','b','c'].map(k=>r.eng[k][key]));const lo=Math.min(0.8,...all),hi=Math.max(1.2,...all);
+    draw($(id),{x0:0,x1:YEAR-1,xt:10,y0:lo-0.05,y1:hi+0.05,h:230,series:sr,hlines:[{y:1}],vlines:events.map(e=>({x:e.day,color:'var(--c-c)',dash:'6 4'})),
+      hover:x=>{const r=hist[x];return r?`<b>第 ${x} 天</b>`+['a','b','c'].map(k=>`<br>${NAMES[k]} ×${r.eng[k][key]}`).join(''):null}})}}
+function renderMet(){
+  const r=last();$('mets').innerHTML=['a','b','c'].map(k=>{const e=r?r.eng[k]:null;
+    return `<div class="met"><div class="l"><span class="sw" style="background:${COL[k]}"></span>${NAMES[k]}</div><div class="big">${e&&e.rel7!=null?(e.rel7*100).toFixed(1)+'%':'—'}</div><div class="note" style="margin:0">${e?e.n7:0} 天</div></div>`}).join('')}
+function renderAll(){renderMain();renderCmp();renderCand();renderErr();renderPar();renderMet();
+  $('dayTxt').textContent=`第 ${hist.length} / ${YEAR} 天`}
+function logAdd(d,t){const li=document.createElement('li');li.innerHTML=`<b>${d==null?'—':'第 '+d+' 天'}</b>`;li.appendChild(document.createTextNode(t));$('log').prepend(li)}
+
+// ---------------------------------------------------------------- 控制
+function setPlay(){$('play').textContent=playing?'⏸ 暂停':'▶ 播放'}
+function speedMs(){const v=+$('spd').value;return Math.round(1200*Math.pow(0.02,v/100)*1)}
+async function api(p){const r=await fetch(p);const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j}
+async function doStep(choice){
+  if(!S||busy||hist.length>=YEAR)return;busy=true;const g=gen;$('stepBtn').disabled=true;
+  try{const o=await api(`/api/step?sid=${S.sid}`+(choice?`&choice=${choice}`:''));if(g!==gen)return;
+    hist.push(o);const c=o.eng.c;events=o.events;
+    if(c.action)logAdd(o.d,c.action);
+    if(c.action&&c.action.startsWith('检测到变点')&&$('apause').checked&&pausedFor!==c.alarm){pausedFor=c.alarm;playing=false;setPlay();
+      $('note').textContent=`第 ${o.d} 天报警：模型的预测误差已累计过线。播放已暂停，请在“候选进化路径”里选一条，或继续播放让系统自己决定。`}
+    if(o.done){playing=false;setPlay()}
+    updNote();renderAll()
+  }catch(e){playing=false;setPlay();$('note').textContent='出错：'+e.message}
+  finally{busy=false;if(S)$('stepBtn').disabled=hist.length>=YEAR;renderCand()}}
+function updNote(){const c=hist.length?last().eng.c:null;if(!c)return;
+  if($('note').textContent.startsWith('第')&&c.alarm!=null&&!playing)return;
+  if(c.alarm!=null)$('note').textContent=`变点待确认（第 ${c.alarm} 天报警）。`;
+  else if(hist.length>=YEAR)$('note').textContent='这一年已经跑完。';
+  else $('note').textContent=`第六年逐日运行中。当前分级：${c.tier}。`}
+async function loop(){const g=gen;while(playing&&g===gen&&hist.length<YEAR){await doStep();if(!playing||g!==gen)break;await new Promise(r=>setTimeout(r,speedMs()))}}
+$('play').onclick=()=>{if(!S||hist.length>=YEAR)return;playing=!playing;setPlay();if(playing)loop()};
+$('stepBtn').onclick=()=>{playing=false;setPlay();doStep()};
+$('reveal').onchange=async()=>{if($('reveal').checked&&S&&!truth){try{truth=await api(`/api/truth?sid=${S.sid}`)}catch(e){}}
+  $('note').textContent=$('reveal').checked&&truth?'真实情况：'+truth.text:'';updNote();renderAll()};
+async function start(seed){
+  gen++;playing=false;setPlay();S=null;hist=[];events=[];truth=null;pausedFor=-1;$('reveal').checked=false;$('log').innerHTML='';
+  $('play').disabled=$('stepBtn').disabled=true;$('note').textContent='正在预训练（用前五年数据估计初始参数）……';renderAll();
+  try{S=await api(`/api/start?scenario=${scen}&search=${$('useS').checked?1:0}&seed=${seed||2}`);
+    $('seedTxt').textContent=`数据流种子 ${S.seed}`;
+    $('preTab').innerHTML='<tr><th>参数</th><th>预训练学到</th><th>真值</th></tr>'+S.pretrain.map(r=>`<tr><td>${r.name}</td><td>${r.learned}${r.unit}</td><td>${r.truth}${r.unit}</td></tr>`).join('');
+    logAdd(null,`预训练完成（${S.secs} 秒），变点门槛 h = ${S.h}。`);
+    $('play').disabled=$('stepBtn').disabled=false;$('note').textContent='准备好了。点“播放”或“单步”，逐日运行第六年。';renderAll()
+  }catch(e){$('note').textContent='启动失败：'+e.message}}
+$('scen').innerHTML=CFG.scen.map(s=>`<button data-k="${s.key}" class="${s.key===scen?'on':''}">${s.name}</button>`).join('');
+$('scen').querySelectorAll('button').forEach(b=>b.onclick=()=>{scen=b.dataset.k;$('scen').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));start(2)});
+$('useS').onchange=()=>start(S?S.seed:2);
+$('newSeed').onclick=()=>start('new');
+start(2);
+</script>
+</body>
+</html>

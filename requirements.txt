@@ -1,0 +1,7 @@
+numpy
+matplotlib
+scipy
+
+# 重做路演 PPT（路演材料/build_ppt.py）时另需：
+# python-pptx
+# Pillow
