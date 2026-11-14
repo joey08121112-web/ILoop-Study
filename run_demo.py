@@ -1,4 +1,4 @@
-"""日新 · 流感版 —— 两次运行演示
+"""ILoop Study · 流感版 —— 两次运行演示
 
 怎么运行（任选一种）：
   1. 在 VS Code 里打开本文件，点右上角的 ▶（Run Python File）；
@@ -183,7 +183,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     setup_style()
     state = json.loads(STATE.read_text()) if STATE.exists() else None
-    print("日新 · 流感版 两次运行演示")
+    print("ILoop Study · 流感版 两次运行演示")
     print(f"输出文件夹：{OUT}\n")
     first_run() if state is None else second_run(state)
     print(f"\n用时 {time.time() - t0:.0f} 秒。文件夹里现在有：")
