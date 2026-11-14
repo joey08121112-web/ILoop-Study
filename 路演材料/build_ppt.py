@@ -94,8 +94,8 @@ pct = lambda v: f"{v:.0%}"
 s = prs.slides.add_slide(BLANK)
 bg(s, DARK)
 text(s, "BoHack 2026 · 「日新」主题赛道", 0.9, 0.8, 11, 0.4, 16, MINT)
-text(s, "ILoop Study", 0.9, 1.6, 11.5, 1.5, 80, WHITE, bold=True)
-text(s, "物理信息引导参数进化的传染病流式预测", 0.9, 3.25, 11.5, 0.8, 36, WHITE, bold=True)
+text(s, "物理信息引导参数进化的传染病流式预测", 0.9, 1.7, 11.5, 1.0, 44, WHITE, bold=True)
+text(s, "ILoop Study", 0.9, 3.0, 11.5, 0.8, 36, WHITE, bold=True)
 text(s, "变点来临时，让模型的参数朝正确的方向进化", 0.9, 4.2, 11.5, 0.5, 20, MINT)
 picture(s, "cover_curve.png", 0.9, 5.05, 11.5, 1.75)
 s.notes_slide.notes_text_frame.text = "开场：报出项目名称，一句话点出痛点——形势突变时，预测模型最容易失准。"
